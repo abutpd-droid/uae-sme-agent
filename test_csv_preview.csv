@@ -1,0 +1,4 @@
+company_name,emirate,area,trade_license_number,issuing_authority,industry,phone,email,source
+Demo Preview Trading LLC,Ras Al Khaimah,Al Nakheel,TEST-CSV-001,RAK DED,Trading,0500000000,demo1@example.com,Test only
+Demo Preview Trading LLC,Ras Al Khaimah,Al Nakheel,TEST-CSV-001,RAK DED,Trading,0500000000,demo1@example.com,Test only
+,Ras Al Khaimah,Al Hamra,TEST-CSV-002,RAK DED,Services,0500000001,demo2@example.com,Test only
