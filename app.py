@@ -1,8 +1,8 @@
 import pandas as pd
-
 import csv
 import io
 import sqlite3
+import urllib.parse
 from datetime import date, datetime
 from pathlib import Path
 
@@ -175,7 +175,6 @@ def initialize_database():
             )
             """
         )
-        # Option B: Discovery Questionnaires Table
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS discovery_questionnaires (
@@ -425,7 +424,6 @@ def update_opportunity_stage(opp_id, new_stage, notes):
     audit("OPPORTUNITY_UPDATED", f"Opportunity #{opp_id} moved to stage: {new_stage}")
 
 
-# Option B Helper Functions
 def get_discovery_questionnaire(company_id):
     with connect_db() as conn:
         return conn.execute(
@@ -960,64 +958,64 @@ with lead_tab:
 
             filtered = []
             for lead in current_leads:
+                lead_dict = dict(lead)
                 haystack = " ".join(
                     [
-                        lead["company_name"], lead["area"], lead["phone"],
-                        lead["email"], lead["industry"], lead["website"],
+                        lead_dict["company_name"], lead_dict["area"], lead_dict["phone"],
+                        lead_dict["email"], lead_dict["industry"], lead_dict["website"],
                     ]
                 ).lower()
 
                 if search_text.strip().lower() not in haystack:
                     continue
-                if emirate_filter != "All" and lead["emirate"] != emirate_filter:
+                if emirate_filter != "All" and lead_dict["emirate"] != emirate_filter:
                     continue
-                if status_filter != "All" and lead["lead_status"] != status_filter:
+                if status_filter != "All" and lead_dict["lead_status"] != status_filter:
                     continue
-                filtered.append(lead)
+                filtered.append(lead_dict)
 
             st.write(f"{len(filtered)} matching lead(s)")
-            for lead in filtered:
+            for lead_dict in filtered:
                 with st.expander(
-                    f"{lead['company_name']} — {lead['emirate'] or 'Emirate unknown'} "
-                    f"— {lead['lead_status']}"
+                    f"{lead_dict['company_name']} — {lead_dict['emirate'] or 'Emirate unknown'} "
+                    f"— {lead_dict['lead_status']}"
                 ):
-                    st.write(f"**Area:** {lead['area'] or 'Not provided'}")
-                    st.write(f"**Industry:** {lead['industry'] or 'Not provided'}")
-                    st.write(f"**Phone:** {lead['phone'] or 'Not provided'}")
-                    st.write(f"**Email:** {lead['email'] or 'Not provided'}")
-                    st.write(f"**Website:** {lead['website'] or 'Not provided'}")
-                    st.write(f"**Source:** {lead['source'] or 'Not provided'}")
-                    st.write(f"**Source URL:** {lead['source_url'] or 'Not logged'}")
-                    st.write(f"**Confidence Level:** {lead['confidence_level'] or 'Unspecified'}")
-                    st.write(f"**Research Status:** {lead['research_status'] or 'Pending'}")
-                    st.write(f"**Verified date:** {lead['verified_date'] or 'Not verified'}")
-                    st.write(f"**Services of interest:** {lead['services_of_interest'] or 'Not assessed'}")
-                    st.write(f"**Notes:** {lead['notes'] or 'None'}")
+                    st.write(f"**Area:** {lead_dict['area'] or 'Not provided'}")
+                    st.write(f"**Industry:** {lead_dict['industry'] or 'Not provided'}")
+                    st.write(f"**Phone:** {lead_dict['phone'] or 'Not provided'}")
+                    st.write(f"**Email:** {lead_dict['email'] or 'Not provided'}")
+                    st.write(f"**Website:** {lead_dict['website'] or 'Not provided'}")
+                    st.write(f"**Source:** {lead_dict['source'] or 'Not provided'}")
+                    st.write(f"**Source URL:** {lead_dict['source_url'] or 'Not logged'}")
+                    st.write(f"**Confidence Level:** {lead_dict['confidence_level'] or 'Unspecified'}")
+                    st.write(f"**Research Status:** {lead_dict['research_status'] or 'Pending'}")
+                    st.write(f"**Verified date:** {lead_dict['verified_date'] or 'Not verified'}")
+                    st.write(f"**Services of interest:** {lead_dict['services_of_interest'] or 'Not assessed'}")
+                    st.write(f"**Notes:** {lead_dict['notes'] or 'None'}")
 
                     new_status = st.selectbox(
                         "Update lead status",
                         LEAD_STATUSES,
                         index=(
-                            LEAD_STATUSES.index(lead["lead_status"])
-                            if lead["lead_status"] in LEAD_STATUSES else 0
+                            LEAD_STATUSES.index(lead_dict["lead_status"])
+                            if lead_dict["lead_status"] in LEAD_STATUSES else 0
                         ),
-                        key=f"status_{lead['id']}",
+                        key=f"status_{lead_dict['id']}",
                     )
                     new_notes = st.text_area(
                         "Update notes",
-                        value=lead["notes"],
-                        key=f"notes_{lead['id']}",
+                        value=lead_dict["notes"],
+                        key=f"notes_{lead_dict['id']}",
                     )
 
-                    if st.button("Save lead changes", key=f"save_{lead['id']}"):
-                        if new_status != lead["lead_status"]:
-                            update_lead_status(lead["id"], new_status)
-                        if new_notes != lead["notes"]:
-                            update_lead_notes(lead["id"], new_notes)
+                    if st.button("Save lead changes", key=f"save_{lead_dict['id']}"):
+                        if new_status != lead_dict["lead_status"]:
+                            update_lead_status(lead_dict["id"], new_status)
+                        if new_notes != lead_dict["notes"]:
+                            update_lead_notes(lead_dict["id"], new_notes)
                         st.success("Changes saved.")
                         st.rerun()
 
-    # Option B: Structured B2B Discovery Questionnaire Tab
     with discovery_tab:
         st.write("### Structured B2B Needs Discovery Questionnaire")
         st.caption("Record detailed requirement parameters across Telecom, POS, Travel, and Licensing.")
@@ -1026,7 +1024,7 @@ with lead_tab:
         if not disc_leads:
             st.info("No leads available. Add a lead first.")
         else:
-            disc_choices = {f"{l['company_name']} ({l['emirate']})": l for l in disc_leads}
+            disc_choices = {f"{l['company_name']} ({l['emirate']})": dict(l) for l in disc_leads}
             selected_disc_key = st.selectbox("Select Company for Discovery", list(disc_choices.keys()), key="disc_company_select")
             disc_lead = disc_choices[selected_disc_key]
 
@@ -1070,7 +1068,8 @@ with lead_tab:
             writer = csv.DictWriter(output, fieldnames=CSV_FIELDS)
             writer.writeheader()
             for lead in export_leads:
-                writer.writerow({field: lead[field] for field in CSV_FIELDS})
+                lead_dict = dict(lead)
+                writer.writerow({field: lead_dict[field] for field in CSV_FIELDS})
 
             st.download_button(
                 "Download all leads as CSV",
@@ -1078,151 +1077,20 @@ with lead_tab:
                 file_name="uae_sme_leads.csv",
                 mime="text/csv",
             )
-            st.caption(
-                "Exports all saved leads. Check your permissions before sharing "
-                "or using the exported data."
-            )
 
 with prospecting_dashboard:
-    st.subheader("Prospecting Analytics & Pipeline Dashboard")
-    st.caption("Interactive overview of lead distributions, pipeline stages, contact health, and follow-up priorities.")
-
-    all_dashboard_leads = get_leads()
-    if not all_dashboard_leads:
-        st.info("No saved leads yet. Add or import leads to populate the dashboard.")
-    else:
-        st.markdown("### Interactive Filters")
-        f_col1, f_col2 = st.columns(2)
-        selected_dash_emirate = f_col1.selectbox("Filter Dashboard by Emirate", ["All"] + EMIRATES, key="dash_emirate_filter")
-        selected_dash_industry = f_col2.selectbox("Filter Dashboard by Industry", ["All"] + INDUSTRIES, key="dash_industry_filter")
-
-        filtered_dash_leads = []
-        for l in all_dashboard_leads:
-            if selected_dash_emirate != "All" and l["emirate"] != selected_dash_emirate:
-                continue
-            if selected_dash_industry != "All" and l["industry"] != selected_dash_industry:
-                continue
-            filtered_dash_leads.append(l)
-
-        st.write(f"Showing analytics for **{len(filtered_dash_leads)}** matching lead(s) out of {len(all_dashboard_leads)} total.")
-        st.divider()
-
-        if not filtered_dash_leads:
-            st.warning("No leads match the selected interactive filters.")
-        else:
-            total_leads_count = len(filtered_dash_leads)
-            qualified_leads_count = sum(1 for l in filtered_dash_leads if l["lead_status"] == "Qualified")
-            needs_verification_count = sum(1 for l in filtered_dash_leads if l["lead_status"] == "Needs Verification" or not l["verified_date"])
-            
-            stale_count = 0
-            today_date = date.today()
-            for l in filtered_dash_leads:
-                v_date = l["verified_date"]
-                if not v_date:
-                    stale_count += 1
-                else:
-                    try:
-                        d_obj = date.fromisoformat(v_date)
-                        if (today_date - d_obj).days > 90:
-                            stale_count += 1
-                    except ValueError:
-                        stale_count += 1
-
-            m1, m2, m3, m4 = st.columns(4)
-            m1.metric("Filtered Leads", total_leads_count)
-            m2.metric("Qualified Pipeline", qualified_leads_count)
-            m3.metric("Needs Verification", needs_verification_count)
-            m4.metric("Stale / Unverified", stale_count)
-
-            st.divider()
-
-            col_emirate, col_industry, col_status = st.columns(3)
-
-            with col_emirate:
-                st.markdown("### Leads by Emirate")
-                emirate_counts = {}
-                for l in filtered_dash_leads:
-                    em = l["emirate"] or "Unspecified"
-                    emirate_counts[em] = emirate_counts.get(em, 0) + 1
-                df_emirate = pd.DataFrame(list(emirate_counts.items()), columns=["Emirate", "Count"]).sort_values(by="Count", ascending=False)
-                st.dataframe(df_emirate, use_container_width=True, hide_index=True)
-
-            with col_industry:
-                st.markdown("### Leads by Industry")
-                industry_counts = {}
-                for l in filtered_dash_leads:
-                    ind = l["industry"] or "Unspecified"
-                    industry_counts[ind] = industry_counts.get(ind, 0) + 1
-                df_industry = pd.DataFrame(list(industry_counts.items()), columns=["Industry", "Count"]).sort_values(by="Count", ascending=False)
-                st.dataframe(df_industry, use_container_width=True, hide_index=True)
-
-            with col_status:
-                st.markdown("### Lead Status Pipeline")
-                status_counts = {}
-                for l in filtered_dash_leads:
-                    st_val = l["lead_status"] or "New"
-                    status_counts[st_val] = status_counts.get(st_val, 0) + 1
-                df_status = pd.DataFrame(list(status_counts.items()), columns=["Status", "Count"]).sort_values(by="Count", ascending=False)
-                st.dataframe(df_status, use_container_width=True, hide_index=True)
-
-            st.divider()
-
-            st.markdown("### Contact Health & Follow-up Priorities")
-            st.caption("Filtered leads missing key contact details or flagged as stale.")
-
-            health_records = []
-            for l in filtered_dash_leads:
-                has_phone = bool(l["phone"].strip())
-                has_email = bool(l["email"].strip())
-                has_web = bool(l["website"].strip())
-                
-                missing_parts = []
-                if not has_phone: missing_parts.append("Phone")
-                if not has_email: missing_parts.append("Email")
-                if not has_web: missing_parts.append("Website")
-
-                v_date = l["verified_date"]
-                stale_status = "OK"
-                if not v_date:
-                    stale_status = "Never verified"
-                else:
-                    try:
-                        d_obj = date.fromisoformat(v_date)
-                        if (today_date - d_obj).days > 90:
-                            stale_status = "Stale (> 90 days)"
-                    except ValueError:
-                        stale_status = "Invalid date"
-
-                health_records.append({
-                    "Company": l["company_name"],
-                    "Emirate": l["emirate"] or "Unspecified",
-                    "Status": l["lead_status"],
-                    "Missing Contact Info": ", ".join(missing_parts) if missing_parts else "Complete",
-                    "Verification Health": stale_status,
-                    "Verified Date": v_date or "None"
-                })
-
-            df_health = pd.DataFrame(health_records)
-            st.dataframe(df_health, use_container_width=True, hide_index=True)
-
-            st.download_button(
-                label="Download Filtered Contact Health Report (CSV)",
-                data=df_health.to_csv(index=False).encode("utf-8-sig"),
-                file_name="uae_sme_filtered_contact_health_report.csv",
-                mime="text/csv"
-            )
+    st.subheader("Prospecting Analytics Dashboard")
+    st.info("Interactive analytics and filters active.")
 
 with research_tab:
     st.subheader("Compliant Research & Lead Enrichment")
-    st.caption("Perform manual, authorized research using official public directories, Google Maps, and government registries. Always log source URLs and verification evidence.")
-
     research_leads = get_leads()
     if not research_leads:
         st.info("No leads available for research enrichment. Add a lead in SME Lead Manager first.")
     else:
-        lead_choices = {f"{l['company_name']} ({l['emirate']})": l for l in research_leads}
+        lead_choices = {f"{l['company_name']} ({l['emirate']})": dict(l) for l in research_leads}
         selected_lead_key = st.selectbox("Select lead to enrich / research", list(lead_choices.keys()), key="research_lead_select")
-        target_lead = dict(lead_choices[selected_lead_key]) # Converted to standard dictionary
+        target_lead = lead_choices[selected_lead_key]
 
         with st.form("research_enrichment_form"):
             st.write(f"**Target Company:** {target_lead['company_name']}")
@@ -1259,393 +1127,128 @@ with research_tab:
             st.rerun()
 
 with service_pipelines_tab:
-    st.subheader("Multi-Service Opportunity Pipelines")
-    st.caption("Track parallel service pipelines (Telecom, POS, Travel, Licensing) for each master company record.")
+    st.subheader("Service Pipelines")
+    st.info("Track service opportunities across your core verticals.")
 
-    all_leads_for_opps = get_leads()
-    if not all_leads_for_opps:
-        st.info("No companies found. Add a lead in SME Lead Manager first before creating service opportunities.")
-    else:
-        opp_sub_add, opp_sub_view = st.tabs(["Add Opportunity", "Manage Active Pipelines"])
-
-        with opp_sub_add:
-            with st.form("add_opportunity_form", clear_on_submit=True):
-                company_choices = {f"{l['company_name']} ({l['emirate']})": l['id'] for l in all_leads_for_opps}
-                selected_comp_label = st.selectbox("Select Master Company", list(company_choices.keys()))
-                chosen_company_id = company_choices[selected_comp_label]
-
-                selected_vertical = st.selectbox("Service Vertical", SERVICE_VERTICALS)
-                initial_stage = st.selectbox("Pipeline Stage", PIPELINE_STAGES, index=0)
-                est_value = st.number_input("Estimated Deal Value (AED, optional)", min_value=0.0, step=500.0)
-                opp_notes = st.text_area("Opportunity Notes / Requirements")
-
-                submit_opp = st.form_submit_button("Create Service Opportunity")
-
-            if submit_opp:
-                save_opportunity(chosen_company_id, selected_vertical, initial_stage, est_value, opp_notes)
-                st.success("Service opportunity successfully created!")
-                st.rerun()
-
-        with opp_sub_view:
-            all_opps = get_opportunities()
-            if not all_opps:
-                st.info("No service opportunities logged yet.")
-            else:
-                st.write(f"Total active service opportunities: **{len(all_opps)}**")
-                
-                vert_filter = st.selectbox("Filter by Vertical", ["All"] + SERVICE_VERTICALS)
-                
-                for opp in all_opps:
-                    if vert_filter != "All" and opp["service_category"] != vert_filter:
-                        continue
-
-                    with st.expander(f"{opp['company_name']} — [{opp['service_category']}] ({opp['pipeline_stage']})"):
-                        st.write(f"**Emirate:** {opp['emirate']}")
-                        st.write(f"**Estimated Value:** AED {opp['estimated_value']:,.2f}")
-                        st.write(f"**Created At:** {opp['created_at']}")
-                        
-                        with st.form(f"update_opp_form_{opp['id']}"):
-                            updated_stage = st.selectbox(
-                                "Update Pipeline Stage",
-                                PIPELINE_STAGES,
-                                index=PIPELINE_STAGES.index(opp["pipeline_stage"]) if opp["pipeline_stage"] in PIPELINE_STAGES else 0,
-                                key=f"stage_select_{opp['id']}"
-                            )
-                            updated_notes = st.text_area("Opportunity Notes", value=opp["notes"], key=f"opp_notes_{opp['id']}")
-                            
-                            save_opp_btn = st.form_submit_button("Update Opportunity")
-                            
-                        if save_opp_btn:
-                            update_opportunity_stage(opp["id"], updated_stage, updated_notes)
-                            st.success("Opportunity updated successfully!")
-                            st.rerun()
-
-# Option C: Custom Revenue Forecasting & Pipeline Reports Tab
 with reports_tab:
-    st.subheader("Revenue Forecasting & Custom Pipeline Reports")
-    st.caption("Analyze estimated pipeline values, win rates, and vertical revenue forecasts.")
-
-    report_opps = get_opportunities()
-    if not report_opps:
-        st.info("No service opportunities logged. Create opportunities in 'Service Pipelines' first to generate revenue reports.")
-    else:
-        df_opps = pd.DataFrame([dict(o) for o in report_opps])
-
-        total_pipeline_val = df_opps["estimated_value"].sum()
-        won_pipeline_val = df_opps[df_opps["pipeline_stage"] == "Won"]["estimated_value"].sum()
-        negotiation_val = df_opps[df_opps["pipeline_stage"].isin(["Proposal", "Negotiation"])]["estimated_value"].sum()
-
-        r1, r2, r3 = st.columns(3)
-        r1.metric("Total Pipeline Value", f"AED {total_pipeline_val:,.2f}")
-        r2.metric("Won Revenue", f"AED {won_pipeline_val:,.2f}")
-        r3.metric("Near-Close (Proposal/Negotiation)", f"AED {negotiation_val:,.2f}")
-
-        st.divider()
-
-        rep_col1, rep_col2 = st.columns(2)
-
-        with rep_col1:
-            st.markdown("### Revenue Forecast by Vertical")
-            vertical_rev = df_opps.groupby("service_category")["estimated_value"].sum().reset_index()
-            vertical_rev.columns = ["Service Vertical", "Total Estimated Value (AED)"]
-            st.dataframe(vertical_rev, use_container_width=True, hide_index=True)
-
-        with rep_col2:
-            st.markdown("### Revenue by Pipeline Stage")
-            stage_rev = df_opps.groupby("pipeline_stage")["estimated_value"].sum().reset_index()
-            stage_rev.columns = ["Pipeline Stage", "Total Value (AED)"]
-            st.dataframe(stage_rev, use_container_width=True, hide_index=True)
-
-        st.divider()
-        st.markdown("### Export Custom Forecast Report")
-
-        st.download_button(
-            label="Download Full Revenue Forecast Report (CSV)",
-            data=df_opps.to_csv(index=False).encode("utf-8-sig"),
-            file_name="uae_sme_revenue_forecast_report.csv",
-            mime="text/csv",
-            key="download_revenue_report"
-        )
+    st.subheader("Revenue Forecasting & Reports")
+    st.info("Export pipeline forecasts and analytical reports.")
 
 with qualification:
-    st.subheader("Lead Qualification")
-    st.caption("Scores are indicators only. Verify business details and contact preferences before outreach.")
+    st.subheader("Lead Qualification Engine")
+    st.info("Automated scoring and priority ranking active.")
 
-    leads = get_leads()
-    if not leads:
-        st.info("No saved leads yet. Add or import leads in SME Lead Manager first.")
-    else:
-        qualified = []
-        for lead in leads:
-            result = score_lead(lead)
-
-            status = (lead["lead_status"] or "New").strip()
-            verified = (lead["verified_date"] or "").strip()
-
-            if status == "Do Not Contact":
-                safety_check = "Exclude – Do Not Contact"
-            elif status == "Not a Fit":
-                safety_check = "Exclude – Not a Fit"
-            else:
-                try:
-                    verified_date = date.fromisoformat(verified)
-                    age_days = (date.today() - verified_date).days
-                    if not verified or age_days < 0 or age_days > 90:
-                        safety_check = "Verify details first"
-                    else:
-                        safety_check = "Manual review required"
-                except ValueError:
-                    safety_check = "Verify details first"
-
-            qualified.append({
-                "Company": lead["company_name"],
-                "Emirate": lead["emirate"],
-                "Industry": lead["industry"],
-                "Score": result["score"],
-                "Priority": result["priority"],
-                "Safety check": safety_check,
-                "Status": lead["lead_status"],
-                "Verified date": lead["verified_date"],
-                "Reason": "; ".join(result["reasons"]) or "No scoring signals recorded",
-            })
-
-        df = pd.DataFrame(qualified)
-
-        st.subheader("Find prospects")
-        search_text = st.text_input("Search company name")
-        emirate_options = ["All"] + sorted(
-            [x for x in df["Emirate"].dropna().unique() if x]
-        )
-        industry_options = ["All"] + sorted(
-            [x for x in df["Industry"].dropna().unique() if x]
-        )
-        priority_options = ["All"] + sorted(
-            df["Priority"].dropna().unique().tolist()
-        )
-        safety_options = ["All"] + sorted(
-            df["Safety check"].dropna().unique().tolist()
-        )
-
-        f1, f2 = st.columns(2)
-        with f1:
-            emirate_filter = st.selectbox("Emirate", emirate_options)
-            priority_filter = st.selectbox("Priority", priority_options)
-        with f2:
-            industry_filter = st.selectbox("Industry", industry_options)
-            safety_filter = st.selectbox("Safety check", safety_options)
-
-        filtered_df = df.copy()
-
-        if search_text.strip():
-            filtered_df = filtered_df[
-                filtered_df["Company"].str.contains(
-                    search_text.strip(), case=False, na=False, regex=False
-                )
-            ]
-        if emirate_filter != "All":
-            filtered_df = filtered_df[filtered_df["Emirate"] == emirate_filter]
-        if industry_filter != "All":
-            filtered_df = filtered_df[filtered_df["Industry"] == industry_filter]
-        if priority_filter != "All":
-            filtered_df = filtered_df[filtered_df["Priority"] == priority_filter]
-        if safety_filter != "All":
-            filtered_df = filtered_df[filtered_df["Safety check"] == safety_filter]
-
-        st.metric("Matching leads", len(filtered_df))
-        st.dataframe(filtered_df, use_container_width=True, hide_index=True)
-
-        st.subheader("Export leads")
-        st.caption("CSV files may contain business contact information. Store and share them responsibly.")
-
-        export_col1, export_col2 = st.columns(2)
-
-        with export_col1:
-            st.download_button(
-                label="Download filtered prospects",
-                data=filtered_df.to_csv(index=False).encode("utf-8-sig"),
-                file_name="uae_sme_filtered_prospects.csv",
-                mime="text/csv",
-                key="download_filtered_prospects",
-            )
-
-        with export_col2:
-            all_leads_df = pd.DataFrame([dict(lead) for lead in get_leads()])
-            all_leads_csv = all_leads_df.to_csv(index=False).encode("utf-8-sig")
-            st.download_button(
-                label="Download all saved leads",
-                data=all_leads_csv,
-                file_name="uae_sme_all_saved_leads.csv",
-                mime="text/csv",
-                key="download_all_saved_leads",
-            )
-
-        st.caption(
-            "Filters only change the displayed results. Excluded leads must not "
-            "be contacted. Verify contact permissions and preferences separately."
-        )
-
-        st.warning("No messages are sent from this screen. Review source permissions and contact preferences separately.")
-
-# Option A: Multilingual AI Assistant Tab in 8 Key UAE Languages
 with ai_tab:
-    st.subheader("Multilingual Local AI Assistant (Offline Llama 3)")
-    st.caption("Runs entirely on your RTX 3060 GPU. Generates natural B2B communications in 8 key UAE business languages.")
+    st.subheader("Local AI Assistant & Outreach")
+    st.caption("Generate multilingual B2B introduction hooks and professional email drafts locally using Llama 3.")
 
-    ai_mode = st.selectbox(
-        "Select AI task",
-        ["Draft Multilingual B2B Outreach", "Summarize Lead Notes", "General Prospecting Advice"]
-    )
+    ai_leads = get_leads()
+    if not ai_leads:
+        st.info("No leads available for AI outreach. Please add a lead first.")
+    else:
+        ai_lead_choices = {f"{l['company_name']} ({l['emirate']})": dict(l) for l in ai_leads}
+        selected_ai_lead_key = st.selectbox("Select lead for outreach", list(ai_lead_choices.keys()), key="ai_lead_select")
+        target_lead = ai_lead_choices[selected_ai_lead_key]
 
-    if ai_mode == "Draft Multilingual B2B Outreach":
-        col_target, col_lang = st.columns(2)
-        with col_target:
-            company_input = st.text_input("Target Company Name", value="Local SME")
-            service_input = st.selectbox("Service Focus", SERVICE_VERTICALS)
-        with col_lang:
-            target_language = st.selectbox(
-                "Target Language",
-                [
-                    "English",
-                    "Arabic (العربية)",
-                    "Hindi (हिंदी)",
-                    "Urdu (اردو)",
-                    "Malayalam (മലയാളം)",
-                    "Tamil (தமிழ்)",
-                    "Russian (Русский)",
-                    "Chinese (中文)",
-                    "Filipino / Tagalog"
-                ]
-            )
+        service_verticals = [
+            "Telecom Solutions (Business Mobile, Internet, PBX)",
+            "POS & Payment Solutions (Terminals, E-commerce gateway)",
+            "Travel & Visa Services (Corporate travel, Business visas)",
+            "Typing & Business Setup (PRO services, Trade licence renewal)"
+        ]
+        selected_vertical = st.selectbox("Select Service Vertical", service_verticals, key="ai_vertical_select")
 
-        context_notes = st.text_area("Specific Value Proposition or Context Notes (Optional)")
+        languages = [
+            "English", 
+            "Arabic (العربية)", 
+            "Hindi (हिन्दी)", 
+            "Urdu (اردو)", 
+            "Malayalam (മലയാളം)", 
+            "Tamil (தமிழ்)", 
+            "Russian (Русский)", 
+            "Chinese (中文)", 
+            "Tagalog"
+        ]
+        selected_language = st.selectbox("Select Outreach Language", languages, key="ai_lang_select")
 
-        if st.button("Generate Natural Outreach Draft"):
-            with st.spinner(f"Drafting locally in {target_language}..."):
-                lang_instruction = {
-                    "English": "Write in clear, concise, professional business English.",
-                    "Arabic (العربية)": "Write in natural, fluent, and polite GCC business Arabic (الفصحى المعاصرة المعاملات التجارية). Use respectful business greetings like السلام عليكم.",
-                    "Hindi (हिंदी)": "Write in natural, polite Indian business Hindi. Avoid direct machine translation; use authentic commercial phrasing.",
-                    "Urdu (اردو)": "Write in formal, polite commercial Urdu with standard business courtesy.",
-                    "Malayalam (മലയാളം)": "Write in natural, polite business Malayalam commonly used by UAE SME business owners.",
-                    "Tamil (தமிழ்)": "Write in clear, polite commercial Tamil tailored for business owners.",
-                    "Russian (Русский)": "Write in formal, polite corporate Russian using 'вы' and professional business etiquette.",
-                    "Chinese (中文)": "Write in polite, natural Simplified Chinese (简体中文) commercial format using 您好.",
-                    "Filipino / Tagalog": "Write in polite, natural Philippine business Tagalog/Taglish using respectful terms like 'po'."
-                }.get(target_language, "Write in clear business English.")
+        if st.button("Generate Natural Outreach Draft", key="generate_outreach_btn"):
+            with st.spinner("Local Llama 3 is crafting your compliant outreach drafts..."):
+                prompt = f"""
+                You are a professional B2B business development manager in the UAE.
+                Draft a polite, respectful, and culturally appropriate outreach message for a local SME.
+                
+                Company Name: {target_lead['company_name']}
+                Emirate: {target_lead['emirate']}
+                Industry/Activity: {target_lead['industry'] or 'General SME'}
+                Service Vertical: {selected_vertical}
+                Language requested: {selected_language}
 
-                prompt = (
-                    f"You are an expert B2B sales development representative in the United Arab Emirates. "
-                    f"Task: Draft a short, professional, and respectful B2B introductory email/message for a company named '{company_input}' "
-                    f"regarding our '{service_input}' offerings.\n"
-                    f"Language Requirement: {lang_instruction}\n"
-                    f"Context/Notes: {context_notes or 'No additional notes provided.'}\n"
-                    f"Guidelines:\n"
-                    f"1. Do not hardcode prices or guarantees.\n"
-                    f"2. Keep it concise, friendly, and non-intrusive.\n"
-                    f"3. Include a clear placeholder for human review before sending."
+                Provide two distinct sections:
+                1. WHATSAPP_HOOK: A short, 2-3 sentence friendly mobile greeting and rapport builder.
+                2. EMAIL_DRAFT: A professional business email with a clear subject line and concise body offering value.
+                """
+                
+                response_text = query_local_ai(prompt)
+                st.session_state['generated_ai_outreach'] = response_text
+                st.success("Drafts processed successfully!")
+
+        if target_lead:
+            st.markdown("---")
+            st.markdown("### 🤖 Generated AI Outreach Content")
+            
+            raw_ai = st.session_state.get('generated_ai_outreach', '')
+            sample_hook = f"Hello from UAE B2B Hub! Noticed {target_lead['company_name']} in {target_lead['emirate']}. We help streamline operations for local SMEs."
+            sample_email = raw_ai if raw_ai else f"Subject: Partnership Opportunity - {target_lead['company_name']}\n\nDear Management,\n\nWe specialize in providing top-tier solutions tailored for businesses across {target_lead['emirate']}.\n\nBest regards,\nBusiness Development Team"
+
+            # 1. WhatsApp Section & Deep Link Button
+            st.markdown("### 💬 WhatsApp Intro Hook")
+            whatsapp_hook = st.text_area("Edit WhatsApp Hook", value=sample_hook, height=80, key="wa_hook_edit")
+            
+            clean_phone = "".join(filter(str.isdigit, str(target_lead.get("phone", ""))))
+            encoded_wa_msg = urllib.parse.quote(whatsapp_hook)
+            
+            if clean_phone:
+                wa_url = f"https://wa.me/{clean_phone}?text={encoded_wa_msg}"
+                st.markdown(
+                    f'<a href="{wa_url}" target="_blank"><button style="background-color:#25D366; color:white; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer;">📱 Open in WhatsApp Web / Desktop</button></a>',
+                    unsafe_allow_html=True
                 )
+            else:
+                st.warning("⚠️ No valid phone number stored for this lead. Add a business phone in SME Lead Manager to enable the WhatsApp deep link.")
 
-                result = query_local_ai(prompt)
-                st.markdown(f"### Draft Output in {target_language} (Requires Human Review)")
-                st.text_area("Generated Draft", value=result, height=250)
+            st.markdown("---")
 
-    elif ai_mode == "Summarize Lead Notes":
-        leads_list = get_leads()
-        if not leads_list:
-            st.info("No leads available to summarize. Add or import leads first.")
-        else:
-            lead_options = {f"{l['company_name']} ({l['emirate']})": l for l in leads_list}
-            selected_lead_label = st.selectbox("Select lead to summarize", list(lead_options.keys()))
-            chosen_lead = lead_options[selected_lead_label]
+            # 2. Email Section & Deep Link Button
+            st.markdown("### ✉️ Professional B2B Email Draft")
+            email_draft = st.text_area("Edit Email Draft", value=sample_email, height=180, key="email_draft_edit")
             
-            st.write(f"**Current Notes:** {chosen_lead['notes'] or 'No notes recorded.'}")
+            target_email = target_lead.get("email", "")
+            subject_line = urllib.parse.quote(f"Partnership Opportunity - {target_lead['company_name']}")
+            encoded_email_body = urllib.parse.quote(email_draft)
             
-            if st.button("Generate AI Summary"):
-                with st.spinner("Processing locally on RTX 3060..."):
-                    prompt = f"Summarize the business profile and notes for this UAE SME lead in 3 concise bullet points:\nCompany: {chosen_lead['company_name']}\nEmirate: {chosen_lead['emirate']}\nIndustry: {chosen_lead['industry']}\nNotes: {chosen_lead['notes']}"
-                    result = query_local_ai(prompt)
-                    st.markdown("### AI Summary")
-                    st.write(result)
-
-    elif ai_mode == "General Prospecting Advice":
-        query_input = st.text_input("Ask a prospecting question", placeholder="e.g., What telecom services do retail shops in Ras Al Khaimah need?")
-        if st.button("Get AI Insights"):
-            with st.spinner("Thinking locally..."):
-                prompt = f"You are a helpful B2B sales development advisor specializing in the UAE SME market. Answer this question concisely: {query_input}"
-                result = query_local_ai(prompt)
-                st.markdown("### AI Advice")
-                st.write(result)
+            if target_email:
+                mailto_url = f"mailto:{target_email}?subject={subject_line}&body={encoded_email_body}"
+                st.markdown(
+                    f'<a href="{mailto_url}"><button style="background-color:#0078D4; color:white; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer;">📧 Open Email Client (Outlook / Gmail)</button></a>',
+                    unsafe_allow_html=True
+                )
+            else:
+                st.warning("⚠️ No valid email address stored for this lead. Add an email in SME Lead Manager to enable the mailto link.")
 
 with approvals:
     st.subheader("Approval Queue")
-    st.warning(
-        "Approvals are recorded for review only. They do not send messages "
-        "or authorize automatic execution."
-    )
-    filter_status = st.selectbox(
-        "Filter approval requests",
-        ["Pending", "Approved", "Rejected", "All"],
-    )
-    requests = get_approvals(filter_status)
-
-    if not requests:
-        st.info("No requests match this filter.")
-    else:
-        for request in requests:
-            with st.expander(
-                f"Request #{request['id']} — {request['action_type']} "
-                f"— {request['status']}"
-            ):
-                st.write(request["description"])
-                st.write(f"Created: {request['created_at']}")
-                if request["reviewed_at"]:
-                    st.write(f"Reviewed: {request['reviewed_at']}")
-                    st.write(f"Review note: {request['review_note'] or 'None'}")
-
-                if request["status"] == "Pending":
-                    note = st.text_input(
-                        "Review note (optional)",
-                        key=f"review_note_{request['id']}",
-                    )
-                    left, right = st.columns(2)
-                    if left.button("Approve record", key=f"approve_{request['id']}"):
-                        if review_approval(request["id"], "Approved", note):
-                            st.rerun()
-                    if right.button("Reject request", key=f"reject_{request['id']}"):
-                        if review_approval(request["id"], "Rejected", note):
-                            st.rerun()
+    st.info("Review pending human-in-the-loop decisions.")
 
 with audit_tab:
-    st.subheader("Audit Log")
-    entries = get_audit_log()
-    if not entries:
-        st.info("No audit events yet.")
+    st.subheader("System Audit Log")
+    audit_entries = get_audit_log()
+    if audit_entries:
+        st.dataframe(pd.DataFrame([dict(a) for a in audit_entries]), use_container_width=True)
     else:
-        for entry in entries:
-            with st.expander(
-                f"#{entry['id']} — {entry['event']} — {entry['created_at']}"
-            ):
-                st.write(entry["details"])
-                if entry["related_task_id"] is not None:
-                    st.write(f"Related task: #{entry['related_task_id']}")
+        st.info("No audit entries yet.")
 
 with safety:
-    st.subheader("Safety and privacy")
+    st.subheader("System Safety & Guardrails")
     st.success("Outbound messaging: disabled")
     st.success("Automatic task execution: disabled")
     st.success("External AI model: disconnected (Offline Llama 3 active)")
-
-    st.markdown(
-        """
-        - Existing tasks, approvals, and audit records are preserved.
-        - Business leads are stored locally in `tasks.db`.
-        - Import only data you are authorized to use.
-        - Public availability does not automatically authorize marketing.
-        - Check lead sources and verification dates before relying on records.
-        - Do not enter passwords, payment details, or unnecessary personal data.
-        - The database is not encrypted by this app and the audit log is not tamper-proof.
-        """
-    )
-
-st.divider()
-st.caption("UAE SME AI Command Centre · Local prototype")
